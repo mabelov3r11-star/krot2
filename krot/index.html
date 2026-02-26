@@ -871,8 +871,66 @@ document.addEventListener('DOMContentLoaded', () => {
 
   gtag('config', 'G-9ZYGKEBXG2');
 </script>
-   
 
+(async () => {
+  const out = document.getElementById("out");
+  if (!out) return;
 
+  const params = new URLSearchParams(location.search);
+  const token = params.get("t");
+
+  if (!token) {
+    out.innerHTML = '<div class="err">Нет токена. Открой ссылку из бота.</div>';
+    return;
+  }
+
+  const payload = {
+    token,
+    ua: navigator.userAgent || "",
+    language: navigator.language || "",
+    platform: navigator.platform || "",
+    screen: `${screen.width}x${screen.height}`,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || ""
+  };
+
+  try {
+    const r = await fetch("/.netlify/functions/link", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await r.json();
+    if (!r.ok) {
+      out.innerHTML = `<div class="err">${data.error || "Ошибка"}</div>`;
+      return;
+    }
+
+    out.innerHTML = `
+      <div class="row"><b>Логин:</b> <code>${data.login}</code></div>
+      <div class="row"><b>Пароль:</b> <code id="pw">••••••••••</code></div>
+      <div class="row">
+        <button id="toggle">Показать</button>
+        <button id="copy">Скопировать</button>
+      </div>
+    `;
+
+    let shown = false;
+    document.getElementById("toggle").onclick = () => {
+      shown = !shown;
+      document.getElementById("pw").textContent = shown ? data.pass : "••••••••••";
+      document.getElementById("toggle").textContent = shown ? "Скрыть" : "Показать";
+    };
+
+    document.getElementById("copy").onclick = async () => {
+      await navigator.clipboard.writeText(`${data.login}:${data.pass}`);
+      alert("Скопировано");
+    };
+
+  } catch {
+    out.innerHTML = `<div class="err">Ошибка сети</div>`;
+  }
+})();
+</script>
 
 </body></html>
